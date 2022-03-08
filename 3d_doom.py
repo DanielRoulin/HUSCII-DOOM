@@ -1,3 +1,4 @@
+import random
 import sys
 sys.path.append("J:\pymodules")
 
@@ -70,7 +71,7 @@ class Particle:
         self.rays = []
         n = 50
         for i in range(n):
-            a = (2*math.pi/n) * i
+            a = (math.pi/2/n) * i
             self.rays.append(Ray(r, self.x, self.y, math.cos(a), math.sin(a)))
             
     def light(self, lines):
@@ -98,20 +99,23 @@ class Particle:
         self.set_rays()
 
 
+def set_env():
+    lines = [
+        Line(r, 0, 0, 0, r.HEIGHT-1),
+        Line(r, 0, r.HEIGHT-1, r.WIDTH-1, r.HEIGHT-1),
+        Line(r, r.WIDTH-1, r.HEIGHT-1, r.WIDTH-1, 0),
+        Line(r, r.WIDTH-1, 0, 0, 0),
+    ]
+    for i in range(5):
+        x1, x2 = random.randrange(r.WIDTH), random.randrange(r.WIDTH)
+        y1, y2 = random.randrange(r.HEIGHT), random.randrange(r.HEIGHT)
+        lines.append(Line(r, x1, y1, x2, y2))
+    return lines
+
 size = os.get_terminal_size()
 r = HUSCIIRenderer(width=size.columns, height=size.lines-3, bg_char = " ")
 
-lines = [
-    Line(r, 0, 0, 0, r.HEIGHT-1),
-    Line(r, 0, r.HEIGHT-1, r.WIDTH-1, r.HEIGHT-1),
-    Line(r, r.WIDTH-1, r.HEIGHT-1, r.WIDTH-1, 0),
-    Line(r, r.WIDTH-1, 0, 0, 0),
-
-    Line(r, 100, 5, 100, 45),
-    Line(r, 10, 5, 10, 45),
-    Line(r, 20, 10, 90, 10),
-    Line(r, 50, 5, 50, 45),
-]
+lines = set_env()
 
 particle = Particle(r)
 
@@ -129,6 +133,8 @@ while True:
         particle.update(2, 0)
     elif keyboard.is_pressed("a"):
         particle.update(-2, 0)
+    elif keyboard.is_pressed("r"):
+        lines = set_env()
 
     r.draw()
     time.sleep(1/30)
