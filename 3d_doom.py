@@ -1,4 +1,3 @@
-import random
 import sys
 sys.path.append("J:\pymodules")
 
@@ -61,19 +60,32 @@ class Line:
         
         
 class Particle:
-    def __init__(self, r):
+    def __init__(self, r, x, y, fov, angle):
         self.r = r
-        self.x = r.WIDTH/2
-        self.y = r.HEIGHT/2
+        self.x = x
+        self.y = y
+        self.fov = fov
+        self.angle = angle
         self.set_rays()
         
     def set_rays(self):
         self.rays = []
-        n = 50
-        for i in range(n):
-            a = (math.pi/2/n) * i
+        for i in range(self.fov):
+            a = math.radians(i + self.angle)
             self.rays.append(Ray(r, self.x, self.y, math.cos(a), math.sin(a)))
             
+    def cast(self, lines):
+        dists = []
+        for ray in self.rays:
+            mini = math.inf
+            for line in lines:
+                intersect = ray.cast(line)
+                if intersect:
+                    d = dist(self.x, self.y, intersect[0], intersect[1])
+                    mini = min(d, mini)
+            dists.append(mini)
+        return dists
+    
     def light(self, lines):
         for ray in self.rays:
             mini = math.inf
@@ -88,53 +100,66 @@ class Particle:
             if pt: 
                 self.r.fill_char = "."
                 self.r.line(ray.x, ray.y, pt[0], pt[1])
+        
+        self.r.point(self.x, self.y, "X")
                 
-                
-    def draw(self):
-        self.r.point(self.x, self.y, "O")
+    def rotate(self, angle):
+        self.angle += angle
+        self.set_rays()
                     
-    def update(self, x, y):
+    def translate(self, x, y):
         self.x += x
         self.y += y
         self.set_rays()
 
 
-def set_env():
-    lines = [
-        Line(r, 0, 0, 0, r.HEIGHT-1),
-        Line(r, 0, r.HEIGHT-1, r.WIDTH-1, r.HEIGHT-1),
-        Line(r, r.WIDTH-1, r.HEIGHT-1, r.WIDTH-1, 0),
-        Line(r, r.WIDTH-1, 0, 0, 0),
-    ]
-    for i in range(5):
-        x1, x2 = random.randrange(r.WIDTH), random.randrange(r.WIDTH)
-        y1, y2 = random.randrange(r.HEIGHT), random.randrange(r.HEIGHT)
-        lines.append(Line(r, x1, y1, x2, y2))
-    return lines
+# size = os.get_terminal_size()
+r = HUSCIIRenderer(110, 50, bg_char = " ")
 
-size = os.get_terminal_size()
-r = HUSCIIRenderer(width=size.columns, height=size.lines-3, bg_char = " ")
+lines = [
+    Line(r, 0, 0, 0, r.HEIGHT/2),
+    Line(r, 0, r.HEIGHT/2, r.WIDTH, r.HEIGHT/2),
+    Line(r, r.WIDTH-1, r.HEIGHT/2, r.WIDTH-1, 0),
+    Line(r, r.WIDTH, 0, 0, 0),
 
-lines = set_env()
+    Line(r, 100, 5, 80, 15),
+    Line(r, 10, 5, 10, 10),
+    Line(r, 20, 10, 90, 10),
+    Line(r, 50, 10, 50, 20),
+]
 
-particle = Particle(r)
+particle = Particle(r, round(r.WIDTH/2), round(r.HEIGHT/4), 40, 0)
 
-while True:
+while True:        
+    if keyboard.is_pressed("s"):
+        particle.translate(0, 1)
+    elif keyboard.is_pressed("w"):
+        particle.translate(0, -1)
+    elif keyboard.is_pressed("d"):
+        particle.translate(2, 0)
+    elif keyboard.is_pressed("a"):
+        particle.translate(-2, 0)
+        
+    elif keyboard.is_pressed("q"):
+        particle.rotate(2)
+    elif keyboard.is_pressed("e"):
+        particle.rotate(-2)
+    
+        
     particle.light(lines)
-    particle.draw()
+    
     for l in lines:
         l.draw()
-        
-    if keyboard.is_pressed("s"):
-        particle.update(0, 1)
-    elif keyboard.is_pressed("w"):
-        particle.update(0, -1)
-    elif keyboard.is_pressed("d"):
-        particle.update(2, 0)
-    elif keyboard.is_pressed("a"):
-        particle.update(-2, 0)
-    elif keyboard.is_pressed("r"):
-        lines = set_env()
+    
+    dists = particle.cast(lines)
+    width = r.WIDTH/len(dists)
+    x = 0
+    for i, d in enumerate(dists):
+        height = r.HEIGHT/2 - (d/50 * r.HEIGHT/2)
+        brightness = 9 - min(9, round(d/50 * 10))
+        r.fill_char = r.CHARS[brightness]
+        r.rect(x, r.HEIGHT/4*3 - height/2, width, height)
+        x += width
 
     r.draw()
     time.sleep(1/30)
